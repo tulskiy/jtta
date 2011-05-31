@@ -32,18 +32,19 @@ public class TestTTA {
             ByteBuffer header = ByteBuffer.allocate(44);
             header.order(ByteOrder.LITTLE_ENDIAN);
             header.put("RIFF".getBytes());
-            header.putInt((int) (36 + info.samples * smp_size));
+            long length = info.samples * smp_size;
+            header.putInt((int) (36 + length));
             header.put("WAVE".getBytes());
             header.put("fmt ".getBytes());
             header.putInt(16);
             header.putShort((short) 1);
             header.putShort((short) info.nch);
-            header.putInt((int) info.samples);
-            header.putInt((int) (info.samples * info.nch * info.bps / 8));
+            header.putInt((int) info.sps);
+            header.putInt((int) (info.sps * info.nch * info.bps / 8));
             header.putShort((short) (info.nch * info.bps / 8));
             header.putShort((short) info.bps);
             header.put("data".getBytes());
-            header.putInt((int) info.samples * smp_size);
+            header.putInt((int) length);
             fos.write(header.array());
             byte[] buffer = new byte[5120 + 4];
 

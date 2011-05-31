@@ -274,7 +274,7 @@ public class TTADecoder {
                 // check frame crc
                 boolean crc_flag = fifo.read_crc32();
 
-                if (crc_flag) {
+                if (!crc_flag) {
                     Arrays.fill(output, (byte) 0);
                     if (!seek_allowed) break;
                 }
