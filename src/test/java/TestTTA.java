@@ -18,11 +18,13 @@ public class TestTTA {
     public void testAll() throws IOException {
         try {
             TTADecoder decoder = new TTADecoder(
-                    new FileInputStream("/home/tulskiy/Downloads/libtta++-2.1/Debug/console/1.tta"));
-            long time = System.currentTimeMillis();
+                    new FileInputStream(
+                            new File(getClass().getResource("sample.tta").toURI())));
+
             TTA_info info = decoder.init_get_info(0);
-            assertEquals(16, info.bps);                            assertEquals(2, info.nch);
-//            assertEquals(29400, info.samples);
+            assertEquals(16, info.bps);
+            assertEquals(2, info.nch);
+            assertEquals(29400, info.samples);
             assertEquals(44100, info.sps);
             int smp_size = info.nch * ((info.bps + 7) / 8);
 
@@ -55,10 +57,11 @@ public class TestTTA {
             }
 
             fos.close();
-            System.out.println(System.currentTimeMillis() - time);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             fail();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         }
     }
 }
