@@ -1,7 +1,11 @@
 package com.tulskiy.tta;
 
 import java.io.FileInputStream;
+import java.util.Arrays;
 
+import static com.tulskiy.tta.Constants.*;
+import static com.tulskiy.tta.Filter.*;
+import static com.tulskiy.tta.Macros.*;
 import static com.tulskiy.tta.TTACodecStatus.*;
 
 /**
@@ -50,7 +54,6 @@ public class TTADecoder {
         if (pos > 0) {
             fifo.seek(pos);
         }
-
 
         fifo.reader_start();
         pos += read_tta_header(info);
@@ -188,8 +191,11 @@ public class TTADecoder {
     } // frame_init
 
     void filter_init(TTA_fltst fs, byte[] data, int shift) {
+        fs.error = 0;
         fs.shift = shift;
         fs.round = 1 << (shift - 1);
+        Arrays.fill(fs.dl, 0);
+        Arrays.fill(fs.dx, 0);
         fs.qm[0] = data[0];
         fs.qm[1] = data[1];
         fs.qm[2] = data[2];
@@ -203,12 +209,88 @@ public class TTADecoder {
     void rice_init(TTA_adapt rice, int k0, int k1) {
         rice.k0 = k0;
         rice.k1 = k1;
-        rice.sum0 = Constants.shift_16[k0];
-        rice.sum1 = Constants.shift_16[k1];
+        rice.sum0 = shift_16[k0];
+        rice.sum1 = shift_16[k1];
     } // rice_init
 
+    public int process_stream(byte[] output) {
+        int current_decoder = 0;
+        TTA_codec dec = decoder[current_decoder];
+        int ptr = 0;
+        int[] cache = new int[MAX_NCH];
+        int cp = 0;
+        int end, smp;
+        int value;
+        int ret = 0;
 
-    long MUL_FRAME_TIME(long x) {
-        return (256 * (x) / 245);
-    } // = x * FRAME_TIME
+        while (fpos < flen && ptr < output.length) {
+            value = fifo.get_value(dec.rice);
+
+            // decompress stage 1: adaptive hybrid filter
+            value = hybrid_filter_dec(dec.fst, value);
+//            System.out.printf("%d\t%d\t%d\t%d\n", value, dec.fst.error, dec.fst.round, dec.fst.shift);
+
+            // decompress stage 2: fixed order 1 prediction
+            value += PREDICTOR1(dec.prev, 5);
+            dec.prev = value;
+
+            if (current_decoder < decoder.length - 1) {
+                cache[cp++] = value;
+                current_decoder++;
+                if (current_decoder < decoder.length)
+                    dec = decoder[current_decoder];
+                else
+                    dec = null;
+            } else {
+                cache[cp] = value;
+
+                if (decoder.length == 1) {
+                    ptr = WRITE_BUFFER(cache[cp], output, ptr, depth);
+                } else {
+                    end = cp;
+                    smp = cp - 1;
+
+                    cache[cp] += cache[smp] / 2;
+                    while (smp > 0) {
+                        cache[smp] = cache[cp--] - cache[smp];
+                        smp--;
+                    }
+                    cache[smp] = cache[cp] - cache[smp];
+
+                    while (smp <= end) {
+                        ptr = WRITE_BUFFER(cache[smp], output, ptr, depth);
+                        smp++;
+                    }
+                }
+
+                cp = 0;
+                fpos++;
+                ret++;
+                dec = decoder[0];
+                current_decoder = 0;
+            }
+
+            if (fpos == flen) {
+                // check frame crc
+                boolean crc_flag = fifo.read_crc32();
+
+                if (crc_flag) {
+                    Arrays.fill(output, (byte) 0);
+                    if (!seek_allowed) break;
+                }
+
+                fnum++;
+
+                // update dynamic info
+                rate = (fifo.count << 3) / 1070;
+//			if (tta_callback)
+//				tta_callback(rate, fnum, frames);
+                if (fnum == frames) break;
+
+                frame_init(fnum, crc_flag);
+            }
+        }
+
+        return ret;
+    } // process_stream
 }

@@ -1,8 +1,10 @@
 package com.tulskiy.tta;
 
-import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+
+import static com.tulskiy.tta.Constants.*;
+import static com.tulskiy.tta.Macros.DEC;
 
 /**
  * Author: Denis Tulskiy
@@ -30,16 +32,19 @@ class TTA_fifo {
     short read_byte() {
         try {
             if (pos == buffer.length) {
-                if (io.read(buffer, 0, TTA_FIFO_BUFFER_SIZE) == -1)
+                if (io.read(buffer, 0, TTA_FIFO_BUFFER_SIZE) == -1) {
+                    System.out.println(io.getChannel().position());
                     throw new tta_exception(TTACodecStatus.TTA_READ_ERROR);
+                }
                 pos = 0;
             }
 
+            short val = (short) (buffer[pos++] & 0xFF);
             // update crc32 and statistics
-            crc = Constants.crc32_table[((int) ((crc ^ buffer[pos]) & 0xff))] ^ (crc >> 8);
+            crc = crc32_table[((int) ((crc ^ val) & 0xFF))] ^ (crc >> 8);
             count++;
 
-            return (short) (buffer[pos++] & 0xFF);
+            return val;
         } catch (IOException e) {
             throw new tta_exception(TTACodecStatus.TTA_READ_ERROR, e);
         }
@@ -90,4 +95,68 @@ class TTA_fifo {
     void reader_start() {
         pos = buffer.length;
     }
+
+    int get_value(TTA_adapt rice) {
+        int k, level, tmp;
+        int value = 0;
+
+        // decode Rice unsigned
+        if ((bcache ^ bit_mask[bcount]) == 0) {
+            value += bcount;
+            bcache = read_byte();
+            bcount = 8;
+            while (bcache == 0xff) {
+                value += 8;
+                bcache = read_byte();
+            }
+        }
+
+        while ((bcache & 1) != 0) {
+            value++;
+            bcache >>= 1;
+            bcount--;
+        }
+        bcache >>= 1;
+        bcount--;
+
+        if (value != 0) {
+            level = 1;
+            k = rice.k1;
+            value--;
+        } else {
+            level = 0;
+            k = rice.k0;
+        }
+
+        if (k != 0) {
+            while (bcount < k) {
+                tmp = read_byte();
+                bcache |= tmp << bcount;
+                bcount += 8;
+            }
+            value = (int) ((value << k) + (bcache & bit_mask[k]));
+            bcache >>= k;
+            bcount -= k;
+            bcache &= bit_mask[bcount];
+        }
+
+        if (level != 0) {
+            rice.sum1 += value - (rice.sum1 >> 4);
+            if (rice.k1 > 0 && rice.sum1 < shift_16[rice.k1])
+                rice.k1--;
+            else if (rice.sum1 > shift_16[rice.k1 + 1])
+                rice.k1++;
+            value += bit_shift[rice.k0];
+        }
+
+        rice.sum0 += value - (rice.sum0 >> 4);
+        if (rice.k0 > 0 && rice.sum0 < shift_16[rice.k0])
+            rice.k0--;
+        else if (rice.sum0 > shift_16[rice.k0 + 1])
+            rice.k0++;
+
+        value = DEC(value);
+
+        return value;
+    } // get_value
 }
