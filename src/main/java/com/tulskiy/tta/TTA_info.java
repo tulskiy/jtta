@@ -8,6 +8,6 @@ public class TTA_info {
     public int format;      // audio format
     public int nch;         // number of channels
     public int bps;         // bits per sample
-    public long sps;         // samplerate (sps)
-    public long samples;     // data length in samples
+    public int sps;         // samplerate (sps)
+    public int samples;     // data length in samples
 }

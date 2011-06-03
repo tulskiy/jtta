@@ -34,7 +34,6 @@ public class Filter {
         sum += pA[0] * pB[0] + pA[1] * pB[1] + pA[2] * pB[2] + pA[3] * pB[3] +
                 pA[4] * pB[4] + pA[5] * pB[5] + pA[6] * pB[6] + pA[7] * pB[7];
 
-//        System.out.println(sum);
         pM[0] = pM[1];
         pM[1] = pM[2];
         pM[2] = pM[3];

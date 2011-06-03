@@ -4,7 +4,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import static com.tulskiy.tta.Constants.*;
-import static com.tulskiy.tta.Macros.DEC;
 
 /**
  * Author: Denis Tulskiy
@@ -15,21 +14,19 @@ class TTA_fifo {
 
     byte[] buffer = new byte[TTA_FIFO_BUFFER_SIZE];
     int pos;
-    int bcount; // count of bits in cache
-    int bcache; // bit cache
-    long crc;
-    int count;
+    private int bcount; // count of bits in cache
+    private int bcache; // bit cache
+    private int crc;
     FileInputStream io;
 
     void reader_reset() {
         // init crc32, reset counter
-        crc = 0xffffffffL;
+        crc = 0xffffffff;
         bcache = 0;
         bcount = 0;
-        count = 0;
     }
 
-    short read_byte() {
+    final short read_byte() {
         try {
             if (pos == buffer.length) {
                 if (io.read(buffer, 0, TTA_FIFO_BUFFER_SIZE) == -1) {
@@ -41,8 +38,7 @@ class TTA_fifo {
 
             short val = (short) (buffer[pos++] & 0xFF);
             // update crc32 and statistics
-            crc = crc32_table[((int) ((crc ^ val) & 0xFF))] ^ (crc >> 8);
-            count++;
+            crc = (int) (crc32_table[((crc ^ val) & 0xFF)] ^ ((crc >> 8) & 0x0FFFFFFF));
 
             return val;
         } catch (IOException e) {
@@ -71,8 +67,7 @@ class TTA_fifo {
     } // read_uint32
 
     boolean read_crc32() {
-        long new_crc = crc ^ 0xffffffffL;
-        return (new_crc != read_uint32());
+        return ((crc ^ 0xffffffffL) != read_uint32());
     } // read_crc32
 
     void reader_skip_bytes(long size) {
@@ -97,7 +92,7 @@ class TTA_fifo {
     }
 
     int get_value(TTA_adapt rice) {
-        int k, level, tmp;
+        int k, level;
         int value = 0;
 
         // decode Rice unsigned
@@ -130,8 +125,7 @@ class TTA_fifo {
 
         if (k != 0) {
             while (bcount < k) {
-                tmp = read_byte();
-                bcache |= tmp << bcount;
+                bcache |= read_byte() << bcount;
                 bcount += 8;
             }
             value = (int) ((value << k) + (bcache & bit_mask[k]));
@@ -155,7 +149,7 @@ class TTA_fifo {
         else if (rice.sum0 > shift_16[rice.k0 + 1])
             rice.k0++;
 
-        value = DEC(value);
+        value = (((value & 1) != 0) ? ((value + 1) >> 1) : (-value >> 1));
 
         return value;
     } // get_value

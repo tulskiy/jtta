@@ -105,8 +105,8 @@ public class TTADecoder {
         info.format = fifo.read_uint16();
         info.nch = fifo.read_uint16();
         info.bps = fifo.read_uint16();
-        info.sps = fifo.read_uint32();
-        info.samples = fifo.read_uint32();
+        info.sps = (int) fifo.read_uint32();
+        info.samples = (int) fifo.read_uint32();
 
         if (!fifo.read_crc32())
             throw new tta_exception(TTA_FILE_ERROR);
@@ -231,7 +231,7 @@ public class TTADecoder {
 //            System.out.printf("%d\t%d\t%d\t%d\n", value, dec.fst.error, dec.fst.round, dec.fst.shift);
 
             // decompress stage 2: fixed order 1 prediction
-            value += PREDICTOR1(dec.prev, 5);
+            value += (dec.prev * ((1 << 5) - 1)) >> 5;
             dec.prev = value;
 
             if (current_decoder < decoder.length - 1) {
@@ -245,7 +245,8 @@ public class TTADecoder {
                 cache[cp] = value;
 
                 if (decoder.length == 1) {
-                    ptr = WRITE_BUFFER(cache[cp], output, ptr, depth);
+                    WRITE_BUFFER(cache[cp], output, ptr, depth);
+                    ptr += depth;
                 } else {
                     end = cp;
                     smp = cp - 1;
@@ -258,7 +259,8 @@ public class TTADecoder {
                     cache[smp] = cache[cp] - cache[smp];
 
                     while (smp <= end) {
-                        ptr = WRITE_BUFFER(cache[smp], output, ptr, depth);
+                        WRITE_BUFFER(cache[smp], output, ptr, depth);
+                        ptr += depth;
                         smp++;
                     }
                 }
@@ -282,7 +284,6 @@ public class TTADecoder {
                 fnum++;
 
                 // update dynamic info
-                rate = (fifo.count << 3) / 1070;
 //			if (tta_callback)
 //				tta_callback(rate, fnum, frames);
                 if (fnum == frames) break;
