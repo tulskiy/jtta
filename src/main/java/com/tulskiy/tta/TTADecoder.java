@@ -41,6 +41,8 @@ public class TTADecoder {
     long flen;    // current frame length in samples
     int fnum;    // currently playing frame index
     long fpos;    // the current position in frame
+    int discard_samples;
+    private int smp_size;
 
     public TTADecoder(FileInputStream inputStream) {
         fifo = new TTA_fifo();
@@ -77,6 +79,7 @@ public class TTADecoder {
         flen_std = MUL_FRAME_TIME(info.sps);
         flen_last = info.samples % flen_std;
         frames = info.samples / flen_std + (flen_last > 0 ? 1 : 0);
+        smp_size = depth * info.nch;
         if (flen_last == 0) flen_last = flen_std;
         rate = 0;
 
@@ -93,7 +96,7 @@ public class TTADecoder {
         return info;
     }
 
-    int read_tta_header(TTA_info info) {
+    public int read_tta_header(TTA_info info) {
         int size = skip_id3v2();
 
         fifo.reader_reset();
@@ -168,7 +171,7 @@ public class TTADecoder {
 
         if (seek_needed && seek_allowed) {
             long pos = seek_table[fnum];
-            if (pos > 0) {
+            if (pos >= 0) {
                 fifo.seek(pos);
             }
             fifo.reader_start();
@@ -292,6 +295,21 @@ public class TTADecoder {
             }
         }
 
+        if (discard_samples > 0) {
+            ret -= discard_samples;
+            System.arraycopy(output, discard_samples * smp_size, output, 0, ret * smp_size);
+            discard_samples = 0;
+        }
+
         return ret;
     } // process_stream
+
+    public void set_position(int sample) {
+        int frame = (int) (sample / flen_std);
+        if (!seek_allowed || frame >= frames)
+            throw new tta_exception(TTA_SEEK_ERROR);
+
+        discard_samples = sample - MUL_FRAME_TIME(frame);
+        frame_init(frame, true);
+    } // set_position
 }
