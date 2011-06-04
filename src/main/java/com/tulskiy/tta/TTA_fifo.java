@@ -21,7 +21,7 @@ class TTA_fifo {
     public static final int TTA_FIFO_BUFFER_SIZE = 5120;
 
     byte[] buffer = new byte[TTA_FIFO_BUFFER_SIZE];
-    int pos;
+    int pos = buffer.length;
     private int bcount; // count of bits in cache
     private int bcache; // bit cache
     private int crc;
