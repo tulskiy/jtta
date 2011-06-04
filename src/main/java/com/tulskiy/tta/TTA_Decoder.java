@@ -9,6 +9,7 @@
 package com.tulskiy.tta;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Arrays;
 
 import static com.tulskiy.tta.Constants.*;
@@ -320,4 +321,8 @@ public class TTA_Decoder {
         discard_samples = sample - MUL_FRAME_TIME(frame);
         frame_init(frame, true);
     } // set_position
+
+    public void close() throws IOException {
+        fifo.io.close();
+    }
 }
