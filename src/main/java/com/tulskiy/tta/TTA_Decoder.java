@@ -20,7 +20,7 @@ import static com.tulskiy.tta.TTACodecStatus.*;
  * Author: Denis Tulskiy
  * Date: 5/30/11
  */
-public class TTADecoder {
+public class TTA_Decoder {
     public static final int MAX_DEPTH = 3;
     public static final int MAX_BPS = (MAX_DEPTH * 8);
     public static final int MIN_BPS = 16;
@@ -52,7 +52,7 @@ public class TTADecoder {
     int discard_samples;
     private int smp_size;
 
-    public TTADecoder(FileInputStream inputStream) {
+    public TTA_Decoder(FileInputStream inputStream) {
         fifo = new TTA_fifo();
         fifo.io = inputStream;
         data = new byte[8];

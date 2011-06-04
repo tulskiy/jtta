@@ -20,7 +20,7 @@ import java.nio.ByteOrder;
 public class Main {
     public static void main(String[] args) throws InterruptedException {
         try {
-            TTADecoder decoder = new TTADecoder(
+            TTA_Decoder decoder = new TTA_Decoder(
                     new FileInputStream(
                             new File("sample.tta")));
 

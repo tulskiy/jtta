@@ -1,4 +1,4 @@
-import com.tulskiy.tta.TTADecoder;
+import com.tulskiy.tta.TTA_Decoder;
 import com.tulskiy.tta.TTA_info;
 import org.junit.Test;
 
@@ -17,7 +17,7 @@ public class TestTTA {
     @Test
     public void testAll() throws IOException {
         try {
-            TTADecoder decoder = new TTADecoder(
+            TTA_Decoder decoder = new TTA_Decoder(
                     new FileInputStream(
                             new File(getClass().getResource("sample.tta").toURI())));
 
