@@ -303,9 +303,17 @@ public class TTA_Decoder {
                 frame_init(fnum, crc_flag);
             }
         }
+        if (ret == 0) {
+            return -1;
+        }
+
         ret *= smp_size;
         if (discard_bytes > 0) {
             ret -= discard_bytes;
+            if (ret < 0) {
+                discard_bytes = Math.abs(ret);
+                return 0;
+            }
             System.arraycopy(output, discard_bytes, output, 0, ret);
             discard_bytes = 0;
         }
@@ -318,7 +326,7 @@ public class TTA_Decoder {
         if (!seek_allowed || frame >= frames)
             throw new tta_exception(TTA_SEEK_ERROR);
 
-        discard_bytes = (sample - MUL_FRAME_TIME(frame)) * smp_size;
+        discard_bytes = (int) ((sample - frame * flen_std) * smp_size);
         frame_init(frame, true);
     } // set_position
 
