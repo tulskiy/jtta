@@ -20,6 +20,8 @@ import java.nio.ByteOrder;
 public class Main {
     public static void main(String[] args) throws InterruptedException {
         try {
+            long time = System.currentTimeMillis();
+
             TTA_Decoder decoder = new TTA_Decoder(
                     new FileInputStream(
                             new File("sample.tta")));
@@ -47,18 +49,18 @@ public class Main {
             fos.write(header.array());
             byte[] buffer = new byte[5120 + 4];
 
-            long time = System.currentTimeMillis();
             while (true) {
                 int len = decoder.process_stream(buffer);
                 if (len <= 0) {
                     break;
                 }
 
-                fos.write(buffer, 0, len * smp_size);
+                fos.write(buffer, 0, len);
             }
 
             fos.close();
             System.out.println(System.currentTimeMillis() - time);
+            Thread.sleep(1000);
         } catch (IOException e) {
             e.printStackTrace();
         }

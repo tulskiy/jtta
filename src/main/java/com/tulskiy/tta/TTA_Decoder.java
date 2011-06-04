@@ -50,7 +50,7 @@ public class TTA_Decoder {
     long flen;    // current frame length in samples
     int fnum;    // currently playing frame index
     long fpos;    // the current position in frame
-    int discard_samples;
+    int discard_bytes;
     private int smp_size;
 
     public TTA_Decoder(FileInputStream inputStream) {
@@ -303,11 +303,11 @@ public class TTA_Decoder {
                 frame_init(fnum, crc_flag);
             }
         }
-
-        if (discard_samples > 0) {
-            ret -= discard_samples;
-            System.arraycopy(output, discard_samples * smp_size, output, 0, ret * smp_size);
-            discard_samples = 0;
+        ret *= smp_size;
+        if (discard_bytes > 0) {
+            ret -= discard_bytes;
+            System.arraycopy(output, discard_bytes, output, 0, ret);
+            discard_bytes = 0;
         }
 
         return ret;
@@ -318,7 +318,7 @@ public class TTA_Decoder {
         if (!seek_allowed || frame >= frames)
             throw new tta_exception(TTA_SEEK_ERROR);
 
-        discard_samples = sample - MUL_FRAME_TIME(frame);
+        discard_bytes = (sample - MUL_FRAME_TIME(frame)) * smp_size;
         frame_init(frame, true);
     } // set_position
 
